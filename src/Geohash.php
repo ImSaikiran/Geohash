@@ -102,12 +102,12 @@ class Geohash
      * @param  float   $min
      * @param  float   $max
      * @param  string  $binaryString
-     * @return float   $coordinate   
+     * @return float   $coordinate
      */
     public function getCoordinate($min, $max, $binaryString)
     {
         $error = 0;
-        for ($i = 0; $i < strlen($binaryString); $i++) { 
+        for ($i = 0; $i < strlen($binaryString); $i++) {
             $mid = ($min + $max)/2 ;
             if ($binaryString[$i] == 1){
                 $min = $mid ;
@@ -144,5 +144,69 @@ class Geohash
             $i++;
         }
         return $binaryString;
+    }
+
+  /**
+   * Determines adjacent cell in given direction.
+   *
+   * @param  string  $hash to which adjacent cell is required
+   * @param  string  $direction from hash (N/S/E/W)
+   * @return string  Geocode of adjacent cell
+   */
+   public function adjacent($hash, $direction)
+   {
+        $hash = strtolower($hash);
+        $direction = strtolower($direction);
+
+        if (empty($hash) || (strpos('nsew', $direction) === false)){
+          return false;
+        }
+
+        $neighbour = [
+          'n' => [ 'p0r21436x8zb9dcf5h7kjnmqesgutwvy', 'bc01fg45238967deuvhjyznpkmstqrwx' ],
+          's' => [ '14365h7k9dcfesgujnmqp0r2twvyx8zb', '238967debc01fg45kmstqrwxuvhjyznp' ],
+          'e' => [ 'bc01fg45238967deuvhjyznpkmstqrwx', 'p0r21436x8zb9dcf5h7kjnmqesgutwvy' ],
+          'w' => [ '238967debc01fg45kmstqrwxuvhjyznp', '14365h7k9dcfesgujnmqp0r2twvyx8zb' ]
+        ];
+
+        $border = [
+          'n' => [ 'prxz', 'bcfguvyz' ],
+          's' => [ '028b', '0145hjnp' ],
+          'e' => [ 'bcfguvyz', 'prxz' ],
+          'w' => [ '0145hjnp', '028b' ]
+        ];
+
+        $lastCh = substr($hash, -1);
+        $parent = substr($hash, 0, -1);
+
+        $type = (strlen($hash) % 2== 0) ? 1 : 0;
+
+        // Check for edge-cases which do not share a common prefix
+        if ((strpos($border[$direction][$type], $lastCh) !== false) && !empty($parent)) {
+            $parent = $this->adjacent($parent, $direction);
+        }
+
+        // Append letter for direction to parent
+        return $parent . $this->$base32Mapping[strpos($neighbour[$direction][$type], $lastCh)];
+    }
+
+    /**
+    * Returns all 8 adjacent cells of the specified geohash.
+    *
+    * @param string  $hash - the Geohash that would like to meet the neighbours
+    * @return array  of the neighbourhood association {n,ne,e,se,s,sw,w,nw => Geohash}
+    */
+    public function neighbours($hash)
+    {
+        return [
+            'n'  => $this->adjacent($hash, 'n'),
+            'ne' => $this->adjacent($this->adjacent($hash, 'n'), 'e'),
+            'e'  => $this->adjacent($hash, 'e'),
+            'se' => $this->adjacent($this->adjacent($hash, 's'), 'e'),
+            's'  => $this->adjacent($hash, 's'),
+            'sw' => $this->adjacent($this->adjacent($hash, 's'), 'w'),
+            'w'  => $this->adjacent($hash, 'w'),
+            'nw' => $this->adjacent($this->adjacent($hash, 'n'), 'w')
+        ];
     }
 }
